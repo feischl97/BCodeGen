@@ -1,4 +1,4 @@
-package Application;
+package MMS.Projekt.BCodeGen;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
@@ -16,7 +16,8 @@ public class Main extends Application {
         
         try {
     
-            FXMLLoader fxmlLoader = new FXMLLoader(Main.class.getResource("MainWindow.fxml"));
+            FXMLLoader fxmlLoader = new FXMLLoader(Main.class.getResource("MainWindow" +
+                                                                                ".fxml"));
             
             Parent root = fxmlLoader.load();
             

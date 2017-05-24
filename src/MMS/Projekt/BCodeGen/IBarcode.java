@@ -1,4 +1,4 @@
-package Application;
+package MMS.Projekt.BCodeGen;
 
 import javafx.scene.Node;
 import javafx.scene.image.Image;
@@ -7,7 +7,6 @@ import javafx.scene.image.Image;
  * Interface to be implemented by all barcodes.
  */
 public interface IBarcode {
-	
 	
 	/**
 	 * runs the current barcode generator
