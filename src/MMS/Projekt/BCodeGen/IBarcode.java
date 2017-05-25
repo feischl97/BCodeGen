@@ -20,5 +20,4 @@ public interface IBarcode {
 	 * (examples in EAN13 & EAN8 class)
 	 */
 	public Node mandatoryProperties();
-	
 }

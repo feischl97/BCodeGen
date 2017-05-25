@@ -4,25 +4,30 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
-import javafx.scene.control.*;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
-import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
+import javafx.stage.FileChooser.ExtensionFilter;
 import org.reflections.Reflections;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.File;
-import java.lang.reflect.Constructor;
 import java.net.URL;
-import java.nio.file.Files;
-import java.util.*;
+import java.security.cert.Extension;
+import java.util.ResourceBundle;
+import java.util.Set;
 
 public class Controller implements Initializable{
 
@@ -32,6 +37,7 @@ public class Controller implements Initializable{
 	private IBarcode iBarcode;
 	private Image currentBarcode = null;
 	
+	private static int barcodeNo = 0;
 	// endregion
 	
 	// region GUI objects
@@ -90,9 +96,9 @@ public class Controller implements Initializable{
 						                   ": " +
 						                   tmpBarcode.toString());
 			}
-			catch(Exception e){
+			catch(Exception ex){
 				
-				e.printStackTrace();
+				ex.printStackTrace();
 			}
 		});
 		
@@ -174,6 +180,7 @@ public class Controller implements Initializable{
 				
 				if(currentBarcode == null){
 					
+					// Show alert if no barcode was generated
 					Alert alert = new Alert(Alert.AlertType.INFORMATION);
 					alert.setTitle("Attention");
 					alert.setHeaderText("You must generate a barcode before exporting it!");
@@ -181,11 +188,41 @@ public class Controller implements Initializable{
 				}
 				else {
 					
-					DirectoryChooser dirChooser = new DirectoryChooser();
-					dirChooser.setTitle("Select a directoy");
-					dirChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+					// Save barcode to file system
+					// Step 1: choose a location
+					FileChooser fileChooser = new FileChooser();
+					fileChooser.setTitle("Select location");
+					fileChooser.setInitialDirectory(
+							new File(
+									System.getProperty("user.home") +
+											"/Desktop"));
 					
+					fileChooser.setInitialFileName("file");
 					
+					fileChooser.getExtensionFilters().addAll(
+							new ExtensionFilter("png", "*.png"),
+					      new ExtensionFilter("bmp", "*.bmp")
+					                                        );
+					File file = fileChooser.showSaveDialog(null);
+					
+					if(file != null){
+						
+						System.out.println("File location: " + file);
+						
+						BufferedImage img = SwingFXUtils.fromFXImage(currentBarcode, null);
+						
+						
+						try {
+							
+							ImageIO.write(img,
+							              getFileExtension(file.getName()),
+							              file);
+						}catch(Exception e){
+							
+							e.printStackTrace();
+						}
+						
+					}
 					
 				}
 				
@@ -195,6 +232,18 @@ public class Controller implements Initializable{
 		
 	}
 	
+	private String getFileExtension(String filename){
+	
+		String extension = "";
+		
+		int i = filename.lastIndexOf('.');
+		if(i > 0){
+			
+			extension = filename.substring(i + 1);
+		}
+		
+		return extension;
+	}
 	
 	/**
 	 * Called to initialize a controller after its root element has been
