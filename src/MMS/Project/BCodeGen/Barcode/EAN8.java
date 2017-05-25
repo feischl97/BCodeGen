@@ -2,6 +2,7 @@ package MMS.Project.BCodeGen.Barcode;
 
 import MMS.Project.BCodeGen.IBarcode;
 import javafx.scene.Node;
+import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 
 /**
@@ -16,7 +17,7 @@ public class EAN8 implements IBarcode{
 	
 	@Override
 	public Node mandatoryProperties() {
-		return null;
+		return new Label("EAN 8");
 	}
 	
 	@Override
