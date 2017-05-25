@@ -1,4 +1,4 @@
-package MMS.Projekt.BCodeGen;
+package MMS.Project.BCodeGen;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;

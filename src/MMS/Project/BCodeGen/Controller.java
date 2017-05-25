@@ -1,4 +1,4 @@
-package MMS.Projekt.BCodeGen;
+package MMS.Project.BCodeGen;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -25,7 +25,6 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.net.URL;
-import java.security.cert.Extension;
 import java.util.ResourceBundle;
 import java.util.Set;
 
@@ -77,10 +76,11 @@ public class Controller implements Initializable{
 	
 		// Create Set of each class in Project that implements the IBarcode interface
 		Set<Class<? extends IBarcode>> barcodeClass = reflections
-				.getSubTypesOf(MMS.Projekt.BCodeGen.IBarcode.class);
+				.getSubTypesOf(IBarcode.class);
 		
-		// Create foreach class implementing the IBarcode interface an instance and add it to the combobox
-		barcodes = FXCollections.<IBarcode>observableArrayList();
+		// Create foreach class implementing the IBarcode interface an instance and
+		// add it to the combobox
+		barcodes = FXCollections.observableArrayList();
 		
 		System.out.println("== Found Barcodes: ");
 		

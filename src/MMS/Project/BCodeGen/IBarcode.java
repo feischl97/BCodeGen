@@ -1,4 +1,4 @@
-package MMS.Projekt.BCodeGen;
+package MMS.Project.BCodeGen;
 
 import javafx.scene.Node;
 import javafx.scene.image.Image;

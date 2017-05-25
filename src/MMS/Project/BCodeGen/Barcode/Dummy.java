@@ -1,6 +1,6 @@
-package MMS.Projekt.BCodeGen.Barcode;
+package MMS.Project.BCodeGen.Barcode;
 
-import MMS.Projekt.BCodeGen.IBarcode;
+import MMS.Project.BCodeGen.IBarcode;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
