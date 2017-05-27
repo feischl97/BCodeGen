@@ -238,7 +238,7 @@ public class EAN8 implements IBarcode{
 	}
 	
 	/**
-	 * Generates the container and colorboxes for the generator color settings
+	 * Generates the container and color picker for the generator color settings
 	 * @param insets padding between the elementes
 	 * @return container with gui elements
 	 */
@@ -265,6 +265,11 @@ public class EAN8 implements IBarcode{
 		return tpColor;
 	}
 	
+	/**
+	 * Generates the container and radio buttons for optional settings
+	 * @param insets padding between the elementes
+	 * @return container with gui elements
+	 */
 	private Node generateOptionalSettings(Insets insets){
 		
 		TitledPane tpOptionals = new TitledPane();
