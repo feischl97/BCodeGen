@@ -21,6 +21,7 @@ public class Dummy implements IBarcode {
 	@Override
 	public Image runGenerator() {
 		
+		System.out.println("Running dummy generator");
 		return new Image("http://docs.oracle.com/javafx/" +
 				                 "javafx/images/javafx-documentation.png");
 	}

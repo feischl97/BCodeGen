@@ -8,7 +8,6 @@ import java.util.logging.Level;
  */
 public class Utils {
 	
-	
 	public static void log(String msg, Level level, Object source){
 		
 		String scr = source

@@ -1,6 +1,9 @@
 package MMS.Project.BCodeGen.Barcode;
 
 import MMS.Project.BCodeGen.IBarcode;
+import MMS.Project.BCodeGen.Utils;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -16,10 +19,11 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.logging.Level;
 import java.util.stream.IntStream;
 
 /**
- * Created by x19de on 25.05.2017.
+ * This class is used to generate a EAN 8 barcode
  */
 public class EAN8 implements IBarcode{
 	
@@ -33,13 +37,17 @@ public class EAN8 implements IBarcode{
 		private Color foreground = Color.BLACK;
 		private Color background = Color.WHITE;
 		private Color debugmarker = Color.PURPLE;
+		
+		// region debug Options
 	
 		private static final Boolean FORCE_DEBUG = true;
+		// endregion
 		
 	// endregion
 	
 	// region GUI elements
 	
+	   private Node properties;
 		private TextField tfdata;
 		private ToggleGroup tgDigits;
 		private RadioButton rbDigits7;
@@ -100,8 +108,16 @@ public class EAN8 implements IBarcode{
 	
 	// endregion
 	
+	public EAN8(){
+		
+		System.out.println("Successfully created " + this.getClass().getName());
+		properties = generateMandatoryProperties(new Insets(5, 5, 5, 5));
+	}
+	
 	@Override
 	public Image runGenerator() throws Exception {
+		
+		Utils.log("Starting generator", Level.INFO, this);
 		
 		return null;
 	}
@@ -116,31 +132,63 @@ public class EAN8 implements IBarcode{
 	@Override
 	public Node mandatoryProperties() {
 		
-		Insets small = new Insets(3, 3, 3, 3);
+		Utils.log("Calling properties", Level.SEVERE, this);
+		return properties;
+	}
+	
+	// region GUI-Creator helper fkt's
+	
+	/**
+	 * This mehtod generated all properties for this barcode type
+	 * @param insets
+	 * @return
+	 */
+	private Node generateMandatoryProperties(Insets insets){
+		
+		Utils.log("First time generating mandatory properties",
+		          Level.SEVERE,
+		          this);
 		
 		VBox container = new VBox();
-		container.setPadding(small);
+		container.setPadding(insets);
 		container.getChildren().add(new Label("Data: "));
 		
 		tfdata = new TextField();
+		tfdata.setText("12345678");
+		
+		tfdata.setTooltip(new Tooltip("Data for barcode\n" +
+				                              "Only numbers are allowed " +
+				                              "for digitcount check mode and digit settings"));
+		
+		ChangeListener<String> tfDataChanged = new ChangeListener<String>() {
+			@Override
+			public void changed(ObservableValue<? extends String> observable, String
+					oldValue, String newValue) {
+				
+				data = newValue;
+				Utils.log("Data: " + newValue, Level.INFO, this);
+			}
+		};
+		tfdata.textProperty().addListener(tfDataChanged);
+		tfDataChanged.changed(tfdata.textProperty(),
+		                      null,
+		                      tfdata.getText());
+		
 		container.getChildren().add(tfdata);
 		
-		
 		GridPane gpSettings = new GridPane();
-		gpSettings.setHgap(small.getTop());
-		gpSettings.setVgap(small.getLeft());
+		gpSettings.setHgap(insets.getTop());
+		gpSettings.setVgap(insets.getLeft());
 		
-		gpSettings.add(generateDigitSettings(small), 0, 0);
-		gpSettings.add(generateModeSettings(small), 1, 0);
-		gpSettings.add(generateSizeSettings(small), 0, 1);
-		gpSettings.add(generateColorSettings(small), 1, 1);
-		gpSettings.add(generateOptionalSettings(small), 0, 2);
+		gpSettings.add(generateDigitSettings(insets), 0, 0);
+		gpSettings.add(generateModeSettings(insets), 1, 0);
+		gpSettings.add(generateSizeSettings(insets), 0, 1);
+		gpSettings.add(generateColorSettings(insets), 1, 1);
+		gpSettings.add(generateOptionalSettings(insets), 0, 2);
 		
 		container.getChildren().add(gpSettings);
 		return container;
 	}
-	
-	// region GUI-Creator helper fkt's
 	
 	/**
 	 * Generates the container and radio buttons for the digit amout settings
@@ -159,13 +207,38 @@ public class EAN8 implements IBarcode{
 		gpDigits.setVgap(insets.getLeft());
 		
 		rbDigits7 = new RadioButton("7-Digits");
+		rbDigits7.setTooltip(new Tooltip("Sets neccessary digits to 7\n" +
+				                                 "Check digit will be calculated\n" +
+															"(RECOMMENDED)"));
 		gpDigits.add(rbDigits7, 0, 0);
 		
 		rbDigits8 = new RadioButton("8-Digits");
+		rbDigits8.setTooltip(new Tooltip("Sets necessary digits to 8\n" +
+				                                 "Check digit won't be calculated nor checked"));
 		gpDigits.add(rbDigits8, 0, 1);
 		
 		tgDigits = new ToggleGroup();
 		tgDigits.getToggles().addAll(rbDigits7, rbDigits8);
+		
+		ChangeListener<Toggle> tgDigitsChanged = new ChangeListener<Toggle>() {
+			@Override
+			public void changed(ObservableValue<? extends Toggle> observable, Toggle
+					oldValue, Toggle newValue) {
+				
+				if(tgDigits.getSelectedToggle() == rbDigits7){
+					
+					digits = 7;
+				}
+				else {
+					
+					digits = 8;
+				}
+				
+				Utils.log("Digits: " + digits, Level.INFO, this);
+			}
+		};
+		
+		tgDigits.selectedToggleProperty().addListener(tgDigitsChanged);
 		rbDigits7.setSelected(true);
 		
 		tpDigits.setContent(gpDigits);
@@ -190,13 +263,34 @@ public class EAN8 implements IBarcode{
 		gpMode.setHgap(insets.getLeft());
 		
 		rbIgnore = new RadioButton("Ignore");
+		rbIgnore.setTooltip(new Tooltip("Ignores every digit after the 7th or 8th Digit (RECOMMENDED)"));
 		gpMode.add(rbIgnore, 0, 0);
 		
 		rbStrict = new RadioButton("Strict");
+		rbStrict.setTooltip(new Tooltip("Will throw an error if input is longer than 7 or 8 digits"));
 		gpMode.add(rbStrict, 0, 1);
 		
 		tgMode = new ToggleGroup();
 		tgMode.getToggles().addAll(rbIgnore, rbStrict);
+		
+		ChangeListener<Toggle> tgModeChanged = new ChangeListener<Toggle>() {
+			@Override
+			public void changed(ObservableValue<? extends Toggle> observable, Toggle
+					oldValue, Toggle newValue) {
+				
+				if(tgMode.getSelectedToggle() == rbIgnore){
+					
+					strict = false;
+				}
+				else{
+					strict = true;
+					
+				}
+				
+				Utils.log("Mode: " + (strict ? "Strinct" : "Ignore"), Level.INFO, this);
+			}
+		};
+		tgMode.selectedToggleProperty().addListener(tgModeChanged);
 		rbIgnore.setSelected(true);
 		
 		tpMode.setContent(gpMode);
@@ -228,11 +322,21 @@ public class EAN8 implements IBarcode{
 		gpSize.add(new Label("Scale: "), 0, 0);
 		
 		cboScale = new ComboBox<>(FXCollections.observableList(scales));
+		cboScale.setTooltip(new Tooltip("Scales barcode up or down, (RECOMMENDEND: 1.00)"));
+		ChangeListener<Double> cboScaleChanged = new ChangeListener<Double>() {
+			@Override
+			public void changed(ObservableValue<? extends Double> observable, Double
+					oldValue, Double newValue) {
+				
+				SCALE = (float)newValue.doubleValue();
+				Utils.log("Scale: " + SCALE, Level.INFO, this);
+			}
+		};
+		cboScale.valueProperty().addListener(cboScaleChanged);
 		cboScale.setValue(1.00d);
+		
 		gpSize.add(cboScale, 1, 0);
-		
 		gpSize.add(new Label("Dots per mm: " + DPMM), 0, 1);
-		
 		tpSize.setContent(gpSize);
 		return tpSize;
 	}
@@ -254,11 +358,34 @@ public class EAN8 implements IBarcode{
 		gpColor.setVgap(insets.getTop());
 		
 		gpColor.add(new Label("Foreground: "), 0, 0);
-		cpForeground = new ColorPicker(Color.BLACK);
+		cpForeground = new ColorPicker();
+		cpForeground.setTooltip(new Tooltip("Changes foreground color (RECOMMENDEND: Black)"));
+		ChangeListener<Color> cpForegroundChanged = new ChangeListener<Color>() {
+			@Override
+			public void changed(ObservableValue<? extends Color> observable, Color
+					oldValue, Color newValue) {
+				foreground = newValue;
+				Utils.log("Foregound color: " + newValue.toString(), Level.CONFIG, this);
+			}
+		};
+		cpForeground.valueProperty().addListener(cpForegroundChanged);
+		cpForeground.setValue(Color.BLACK);
 		gpColor.add(cpForeground, 0, 1);
 		
 		gpColor.add(new Label("Background: "), 0, 2);
-		cpBackground = new ColorPicker(Color.WHITE);
+		cpBackground = new ColorPicker();
+		cpBackground.setTooltip(new Tooltip("Changes background color (RECOMMENDEND: White)"));
+		ChangeListener<Color> cpBackgroundChanged = new ChangeListener<Color>() {
+			@Override
+			public void changed(ObservableValue<? extends Color> observable, Color
+					oldValue, Color newValue) {
+				
+				background = newValue;
+				Utils.log("Background color: " + newValue.toString(), Level.CONFIG, this);
+			}
+		};
+		cpBackground.valueProperty().addListener(cpBackgroundChanged);
+		cpBackground.setValue(Color.WHITE);
 		gpColor.add(cpBackground, 0, 3);
 		
 		tpColor.setContent(gpColor);
@@ -280,14 +407,46 @@ public class EAN8 implements IBarcode{
 		gpOptionals.setVgap(insets.getTop());
 		gpOptionals.setHgap(insets.getLeft());
 		
-		cbRetard = new CheckBox("Strik trough");
+		cbRetard = new CheckBox("Strike trough");
+		cbRetard.setTooltip(new Tooltip("Adds grounding to barcode"));
+		ChangeListener<Boolean> retardChanged = new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean
+					oldValue, Boolean newValue) {
+				
+				retard = newValue;
+				Utils.log("Retard-mode: " + newValue, Level.CONFIG, this);
+			}
+		};
+		cbRetard.selectedProperty().addListener(retardChanged);
+		cbRetard.setSelected(false);
 		gpOptionals.add(cbRetard, 0, 0);
 		
 		cbDebug = new CheckBox(FORCE_DEBUG ? "DEBUG FORCED": "Debug");
+		cbDebug.setTooltip(new Tooltip("Enables debug mode (NOT RECOMMENDED)"));
+		ChangeListener<Boolean> cbDebugChanged = new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean
+					oldValue, Boolean newValue) {
+				
+				if(!FORCE_DEBUG){
+					
+					debug = true;
+				}
+				else {
+					
+					debug = newValue;
+				}
+				
+				Utils.log("DEBGU-MODE: " + debug + " FORCED: " + FORCE_DEBUG,
+				          Level.SEVERE,
+				          this);
+			}
+		};
+		cbDebug.selectedProperty().addListener(cbDebugChanged);
 		cbDebug.setSelected(FORCE_DEBUG);
 		cbDebug.setDisable(FORCE_DEBUG);
 		gpOptionals.add(cbDebug, 0, 1);
-		
 		
 		tpOptionals.setContent(gpOptionals);
 		return tpOptionals;
