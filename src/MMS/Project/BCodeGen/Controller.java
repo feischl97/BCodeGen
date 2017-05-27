@@ -73,8 +73,6 @@ public class Controller implements Initializable{
 	 * this method sets the GUI up
 	 */
 	public void setup(){
-	
-		
 		
 		// Create Reflections object
 		// Reflections reflections = new Reflections();
@@ -85,6 +83,7 @@ public class Controller implements Initializable{
 		
 		// Create foreach class implementing the IBarcode interface an instance and
 		// add it to the combobox
+		
 		barcodes = FXCollections.observableArrayList();
 		
 		barcodes.addAll(
