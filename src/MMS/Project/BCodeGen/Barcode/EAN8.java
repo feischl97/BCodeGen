@@ -44,7 +44,7 @@ public class EAN8 implements IBarcode{
 		
 		// region debug Options
 	
-		private static final Boolean FORCE_DEBUG = true;
+		private static final Boolean FORCE_DEBUG = false;
 		// endregion
 		
 	// endregion
@@ -133,17 +133,19 @@ public class EAN8 implements IBarcode{
 		}
 		
 		String cleanData = data.substring(0, digits);
+		Utils.log("Data         : " + cleanData, Level.INFO, this);
 		
 		if(digits != 8){
 			
 			cleanData += getChecksum(cleanData);
+			Utils.log("Data /w check: " + cleanData, Level.INFO, this);
 		}
 		
 		String rawData = getRaw(cleanData);
+		Utils.log("Raw data     : " + rawData, Level.INFO, this);
 		
 		return render(rawData);
 	}
-	
 	
 	// region Private methods
 	
@@ -185,7 +187,7 @@ public class EAN8 implements IBarcode{
 		int mul = 3;
 		int sum = 0;
 		
-		for(int i = data.length() - 1; i > 0; i--){
+		for(int i = 0; i < data.length(); i++){
 			
 			sum += Integer.parseInt("" + data.charAt(i) * mul);
 			mul = (mul == 3) ? 1 : 3;
@@ -255,7 +257,7 @@ public class EAN8 implements IBarcode{
 		int margin = Math.round(MARGIN * SCALE * DPMM);
 		
 		// Calculate width of an individial bit
-		float bit = Math.round((width/raw.length()) * 100.0f) / 100.0f;
+		float bit = Math.round((width/(float)raw.length()) * 100.0f) / 100.0f;
 		
 		if(debug){
 			
@@ -266,6 +268,7 @@ public class EAN8 implements IBarcode{
 			Utils.log("Bit   : " + bit, Level.INFO, this);
 			Utils.log("Raw   : " + raw.length(), Level.INFO, this);
 			Utils.log("Bit's : " + (bit * raw.length()), Level.INFO, this);
+			Utils.log("Delta : " + Math.round((width - (bit * raw.length())) * 100d)/100d, Level.INFO, this);
 			Utils.log("Pre-rendering report END", Level.INFO, this);
 		}
 		
@@ -293,7 +296,7 @@ public class EAN8 implements IBarcode{
 		}
 		
 		// TODO: Render
-		float startY = MARGIN;
+		float startY = margin;
 		float endY = 0;
 		
 		for(int i = 0; i < raw.length(); i++){
@@ -306,15 +309,14 @@ public class EAN8 implements IBarcode{
 				
 				endY = (IntStream.of(specIDX).anyMatch(j -> j == cmp)) ? (heigth + margin/2) : heigth;
 				
-				g2d.setColor(forePen);
-				g2d.drawRect((int)(margin + i * bit),
-				             margin,
-				             (int)bit,
-								 (int)endY);
-				g2d.fillRect((int)(margin + i * bit),
-				             margin,
-				             (int)bit,
-				             (int)endY);
+				for(int x = 0; x < bit; x++){
+					
+					g2d.setColor(forePen);
+					g2d.drawLine((int)(margin + i * bit + x),
+					             (int)startY,
+					             (int)(margin + i * bit + x),
+					             (int)(endY + margin));
+				}
 				
 				if(debug){
 					
@@ -327,7 +329,16 @@ public class EAN8 implements IBarcode{
 			}
 		}
 		
-		// Dispose grafics obj. and convert buffered image to javafx image
+		if(retard){
+			
+			g2d.setColor(forePen);
+			g2d.fillRect((int)(0.75 * margin),
+			           (int)(1.75 * margin),
+			           (int)(width + 0.50 * margin),
+			           (int)(0.10 * margin));
+		}
+		
+		// Dispose graphics obj. and convert buffered image to javafx image
 		g2d.dispose();
 		WritableImage barcode = new WritableImage(image.getWidth(), image.getHeight());
 		SwingFXUtils.toFXImage(image, barcode);
@@ -372,8 +383,10 @@ public class EAN8 implements IBarcode{
 			public void changed(ObservableValue<? extends String> observable, String
 					oldValue, String newValue) {
 				
-				data = newValue;
-				Utils.log("Data: " + newValue, Level.INFO, this);
+				if(newValue.length() >= 7 && newValue.length() <= 8) {
+					data = newValue;
+					Utils.log("Data: " + newValue, Level.INFO, this);
+				}
 			}
 		};
 		tfdata.textProperty().addListener(tfDataChanged);
@@ -636,7 +649,7 @@ public class EAN8 implements IBarcode{
 			public void changed(ObservableValue<? extends Boolean> observable, Boolean
 					oldValue, Boolean newValue) {
 				
-				if(!FORCE_DEBUG){
+				if(FORCE_DEBUG){
 					
 					debug = true;
 				}
