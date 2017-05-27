@@ -155,7 +155,7 @@ public class Controller implements Initializable{
 				               	ap_Configuration.getChildren()
 					                               .add(node);
 				               	
-				               	System.out.printf("Changed barcode type from %s to %s",
+				               	System.out.printf("Changed barcode type from %s to %s%n",
 					                                 oldValue.getClass().toString(),
 					                                 newValue.getClass().toString());
 				               }
@@ -253,6 +253,18 @@ public class Controller implements Initializable{
 		}
 		
 		return extension;
+	}
+	
+	public void updateStatus(String msg, StatusKind kind){
+		
+		if(kind == StatusKind.LEFT){
+			
+			lbl_LeftStatus.setText(msg);
+		}
+		else {
+			
+			lbl_RightStatus.setText(msg);
+		}
 	}
 	
 	/**
