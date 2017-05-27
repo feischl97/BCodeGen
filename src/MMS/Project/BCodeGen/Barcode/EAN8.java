@@ -5,16 +5,20 @@ import MMS.Project.BCodeGen.Utils;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -36,7 +40,7 @@ public class EAN8 implements IBarcode{
 		private boolean debug;
 		private Color foreground = Color.BLACK;
 		private Color background = Color.WHITE;
-		private Color debugmarker = Color.PURPLE;
+		private Color debugMarker = Color.PURPLE;
 		
 		// region debug Options
 	
@@ -72,7 +76,7 @@ public class EAN8 implements IBarcode{
 		private static final float WIDTH = 22.11f;
 		private static final float MARGIN = 4.62f;
 		private static final float HEIGTH = 21.31f;
-		private static final float DPMM = 25;
+		private static final float DPMM = 30;
 	
 		private static final String START = "101";
 		private static final String END = "101";
@@ -119,13 +123,216 @@ public class EAN8 implements IBarcode{
 		
 		Utils.log("Running generator", Level.INFO, this);
 		
-		return null;
+		try {
+			
+			isValid(data);
+		}
+		catch(Exception e){
+			
+			throw new RuntimeException(e.getMessage());
+		}
+		
+		String cleanData = data.substring(0, digits);
+		
+		if(digits != 8){
+			
+			cleanData += getChecksum(cleanData);
+		}
+		
+		String rawData = getRaw(cleanData);
+		
+		return render(rawData);
 	}
 	
 	
 	// region Private methods
 	
+	/**
+	 * Checks if data is valid, if not thwows exception
+	 * @param data unchecked data
+	 * @return valid/invalid
+	 */
+	private boolean isValid(String data) throws Exception{
+		
+		if(strict && data.length() != digits){
+			
+			throw new IllegalArgumentException("Length needs to match digits");
+		}
+		
+		if(!strict && data.length()<digits){
+			
+			throw new IllegalArgumentException("Data is to short to be processed further");
+		}
+		
+		for(char c: data.toCharArray()){
+			
+			if(!Character.isDigit(c)){
+				
+				throw new IllegalArgumentException("Data contains non numerical character");
+			}
+		}
+		
+		return true;
+	}
 	
+	/**
+	 * Calculated the checksum for the EAN 8 barcode
+	 * @param data checked, valid data
+	 * @return checksum
+	 */
+	private int getChecksum(String data){
+		
+		int mul = 3;
+		int sum = 0;
+		
+		for(int i = data.length() - 1; i > 0; i--){
+			
+			sum += Integer.parseInt("" + data.charAt(i) * mul);
+			mul = (mul == 3) ? 1 : 3;
+		}
+		
+		int nextMulOfTen = (sum + 9) - ((sum + 9) % 10);
+		return nextMulOfTen - sum;
+	}
+	
+	/**
+	 * generates raw data from checked data with checksum
+	 * @param data data with checksum
+	 * @return raw binary string
+	 */
+	private String getRaw(String data){
+		
+		StringBuilder raw = new StringBuilder();
+		
+		raw.append(START);
+		
+		for(int i = 0; i < data.length()/2; i++){
+			
+			raw.append(L_CODE.get(Integer.parseInt("" + data.charAt(i))));
+		}
+		
+		raw.append(SEPARATOR);
+		
+		for(int i = data.length()/2; i < data.length(); i++){
+			
+			raw.append(R_CODE.get(Integer.parseInt("" + data.charAt(i))));
+		}
+		
+		raw.append(END);
+		
+		return raw.toString();
+	}
+	
+	/**
+	 * Renders barcode from raw data
+	 * @param raw data from raw generator
+	 * @return
+	 */
+	private Image render(String raw){
+		
+		Utils.log("Starting rendering", Level.INFO, this);
+		
+		// Convert colors
+		java.awt.Color debugPen = new java.awt.Color((float)debugMarker.getRed(),
+		                                             (float)debugMarker.getGreen(),
+		                                             (float)debugMarker.getBlue(),
+		                                             (float)debugMarker.getOpacity());
+		
+		java.awt.Color forePen = new java.awt.Color( (float)foreground.getRed(),
+		                                             (float)foreground.getGreen(),
+		                                             (float)foreground.getBlue(),
+		                                             (float)foreground.getOpacity());
+		
+		java.awt.Color backPen = new java.awt.Color( (float)background.getRed(),
+		                                             (float)background.getGreen(),
+		                                             (float)background.getBlue(),
+		                                             (float)background.getOpacity());
+		
+		// Calculate actual sizes in px
+		
+		int width = Math.round(WIDTH * SCALE * DPMM);
+		int heigth = Math.round(HEIGTH * SCALE * DPMM);
+		int margin = Math.round(MARGIN * SCALE * DPMM);
+		
+		// Calculate width of an individial bit
+		float bit = Math.round((width/raw.length()) * 100.0f) / 100.0f;
+		
+		if(debug){
+			
+			Utils.log("Pre-rendering report START", Level.INFO, this);
+			Utils.log("Width : " + width, Level.INFO, this);
+			Utils.log("Heigth: " + heigth, Level.INFO, this);
+			Utils.log("Margin: " + margin, Level.INFO, this);
+			Utils.log("Bit   : " + bit, Level.INFO, this);
+			Utils.log("Raw   : " + raw.length(), Level.INFO, this);
+			Utils.log("Bit's : " + (bit * raw.length()), Level.INFO, this);
+			Utils.log("Pre-rendering report END", Level.INFO, this);
+		}
+		
+		// Create array of special indizes for heigth variation later
+		int l = raw.length() - 1;
+		int[] specIDX = new int[]{0, 2, l/2 - 1, l/2 +1, l - 2, l};
+		
+		// Create image and grafics obj, set background to backPan
+		BufferedImage image = new BufferedImage(width + 2 * margin,
+		                                        heigth + 2* margin,
+		                                        BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g2d = image.createGraphics();
+		
+		g2d.setColor(backPen);
+		g2d.fillRect(0, 0, image.getWidth(), image.getHeight());
+		
+		if(debug){
+			
+			g2d.setColor(debugPen);
+			g2d.drawRect(0,0,2 * margin + width - 1, 2 * margin + heigth - 1);
+			g2d.drawLine(margin, 0, margin, heigth + 2 * margin);
+			g2d.drawLine(width + margin, 0, width + margin, heigth + 2 * margin);
+			g2d.drawLine(0, margin, width + 2 * margin, margin);
+			g2d.drawLine(0, heigth + margin, width + 2 * margin, heigth + margin);
+		}
+		
+		// TODO: Render
+		float startY = MARGIN;
+		float endY = 0;
+		
+		for(int i = 0; i < raw.length(); i++){
+		
+			char c = raw.charAt(i);
+			
+			if(c == '1'){
+				
+				final int cmp = i;
+				
+				endY = (IntStream.of(specIDX).anyMatch(j -> j == cmp)) ? (heigth + margin/2) : heigth;
+				
+				g2d.setColor(forePen);
+				g2d.drawRect((int)(margin + i * bit),
+				             margin,
+				             (int)bit,
+								 (int)endY);
+				g2d.fillRect((int)(margin + i * bit),
+				             margin,
+				             (int)bit,
+				             (int)endY);
+				
+				if(debug){
+					
+					g2d.setColor(debugPen);
+					g2d.drawRect((int)(margin + i * bit),
+					             margin,
+					             (int)bit,
+					             (int)endY);
+				}
+			}
+		}
+		
+		// Dispose grafics obj. and convert buffered image to javafx image
+		g2d.dispose();
+		WritableImage barcode = new WritableImage(image.getWidth(), image.getHeight());
+		SwingFXUtils.toFXImage(image, barcode);
+		return barcode;
+	}
 	
 	// endregion
 	

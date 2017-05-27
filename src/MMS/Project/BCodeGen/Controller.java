@@ -166,7 +166,7 @@ public class Controller implements Initializable{
 				}
 				catch(NullPointerException e){
 					
-					iv_BarcodePreview.setImage(new Dummy().runGenerator());
+					iv_BarcodePreview.setImage(new Image("https://www.minecraftskinstealer.com/achievement/a.php?i=20&h=Achievement+Get%21&t=You+broke+the+program%21"));
 					Utils.log("Not able to generate barcode: " + e.toString(), Level.SEVERE, this);
 				}
 				catch(Exception e){
