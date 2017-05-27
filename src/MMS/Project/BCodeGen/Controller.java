@@ -1,5 +1,8 @@
 package MMS.Project.BCodeGen;
 
+import MMS.Project.BCodeGen.Barcode.Dummy;
+import MMS.Project.BCodeGen.Barcode.EAN13;
+import MMS.Project.BCodeGen.Barcode.EAN8;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -71,36 +74,44 @@ public class Controller implements Initializable{
 	 */
 	public void setup(){
 	
+		
+		
 		// Create Reflections object
-		Reflections reflections = new Reflections();
+		// Reflections reflections = new Reflections();
 	
 		// Create Set of each class in Project that implements the IBarcode interface
-		Set<Class<? extends IBarcode>> barcodeClass = reflections
-				.getSubTypesOf(IBarcode.class);
+		// Set<Class<? extends IBarcode>> barcodeClass = reflections
+		// 	.getSubTypesOf(IBarcode.class);
 		
 		// Create foreach class implementing the IBarcode interface an instance and
 		// add it to the combobox
 		barcodes = FXCollections.observableArrayList();
 		
+		barcodes.addAll(
+				new Dummy(),
+				new EAN8(),
+		      new EAN13()
+		               );
+		
 		System.out.println("== Found Barcodes: ");
 		
 		// TODO: write more descriptive comment
-		barcodeClass.forEach((e)->{
-			try {
-				
-				IBarcode tmpBarcode = e.getConstructor().newInstance();
-				barcodes.add(tmpBarcode);
-				
-				System.out.println("> " +
-						                   tmpBarcode.getClass() +
-						                   ": " +
-						                   tmpBarcode.toString());
-			}
-			catch(Exception ex){
-				
-				ex.printStackTrace();
-			}
-		});
+//		barcodeClass.forEach((e)->{
+//			try {
+//
+//				IBarcode tmpBarcode = e.getConstructor().newInstance();
+//				barcodes.add(tmpBarcode);
+//
+//				System.out.println("> " +
+//						                   tmpBarcode.getClass() +
+//						                   ": " +
+//						                   tmpBarcode.toString());
+//			}
+//			catch(Exception ex){
+//
+//				ex.printStackTrace();
+//			}
+//		});
 		
 		if(barcodes.size() != 0) {
 			
@@ -118,7 +129,7 @@ public class Controller implements Initializable{
 			System.exit(2);
 		}
 		
-		iBarcode = cbo_IBarcode.getValue();
+		iBarcode = cbo_IBarcode.getSelectionModel().getSelectedItem();
 		ap_Configuration.getChildren().clear();
 		ap_Configuration.getChildren().add(iBarcode.mandatoryProperties());
 		// btn_Generate.setDisable(true);
