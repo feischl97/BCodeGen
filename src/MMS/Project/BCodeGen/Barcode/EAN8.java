@@ -117,7 +117,7 @@ public class EAN8 implements IBarcode{
 	@Override
 	public Image runGenerator() throws Exception {
 		
-		Utils.log("Starting generator", Level.INFO, this);
+		Utils.log("Running generator", Level.INFO, this);
 		
 		return null;
 	}
@@ -136,7 +136,7 @@ public class EAN8 implements IBarcode{
 		return properties;
 	}
 	
-	// region GUI-Creator helper fkt's
+	// region GUI-Creator helper functions
 	
 	/**
 	 * This mehtod generated all properties for this barcode type

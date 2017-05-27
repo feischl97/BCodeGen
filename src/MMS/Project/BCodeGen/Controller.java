@@ -145,6 +145,8 @@ public class Controller implements Initializable{
 				ap_Configuration.getChildren()
 				                .add(node);
 				
+				iBarcode = newValue;
+				
 				Utils.log("Changed barcode type: " + newValue.toString(), Level.SEVERE, this);
 			}
 		};
@@ -165,7 +167,7 @@ public class Controller implements Initializable{
 				catch(NullPointerException e){
 					
 					iv_BarcodePreview.setImage(new Dummy().runGenerator());
-					Utils.log("Not able to generate barcode: "+e.toString(), Level.SEVERE, this);
+					Utils.log("Not able to generate barcode: " + e.toString(), Level.SEVERE, this);
 				}
 				catch(Exception e){
 					

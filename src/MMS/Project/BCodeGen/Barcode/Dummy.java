@@ -1,9 +1,12 @@
 package MMS.Project.BCodeGen.Barcode;
 
 import MMS.Project.BCodeGen.IBarcode;
+import MMS.Project.BCodeGen.Utils;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
+
+import java.util.logging.Level;
 
 /**
  * Created by x19de on 24.05.2017.
@@ -21,7 +24,7 @@ public class Dummy implements IBarcode {
 	@Override
 	public Image runGenerator() {
 		
-		System.out.println("Running dummy generator");
+		Utils.log("Running generator", Level.INFO, this);
 		return new Image("http://docs.oracle.com/javafx/" +
 				                 "javafx/images/javafx-documentation.png");
 	}
