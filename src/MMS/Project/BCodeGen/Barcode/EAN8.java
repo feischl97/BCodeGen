@@ -19,10 +19,9 @@ import javafx.scene.paint.Color;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.util.*;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.stream.IntStream;
 
@@ -38,6 +37,7 @@ public class EAN8 implements IBarcode{
 		private boolean strict;
 		private boolean retard;
 		private boolean debug;
+		private boolean supHRP;
 		private Color foreground = Color.BLACK;
 		private Color background = Color.WHITE;
 		private Color debugMarker = Color.PURPLE;
@@ -62,6 +62,7 @@ public class EAN8 implements IBarcode{
 		private ColorPicker cpForeground;
 	   private ColorPicker cpBackground;
 	   private CheckBox cbRetard;
+	   private CheckBox cbSupHRP;
 	   private CheckBox cbDebug;
 	   private ComboBox<Double> cboScale;
 	
@@ -76,12 +77,17 @@ public class EAN8 implements IBarcode{
 		private static final float WIDTH = 22.11f;
 		private static final float MARGIN = 4.62f;
 		private static final float HEIGTH = 21.31f;
-		private static final float DPMM = 30;
+		private static final float SPACER = 0.33f;
+		private static final float TEXTHEIGTH = 2.75f;
+		private static final float EXTENSION = 1.95f;
+		private static final float DPMM = 33.3f;
 	
 		private static final String START = "101";
 		private static final String END = "101";
 		private static final String SEPARATOR = "01010";
 	
+		private Font defaultFont;
+		
 	private static final Map<Integer, String> L_CODE = new TreeMap<Integer, String>(){{
 		
 		put(0, "0001101");
@@ -114,8 +120,22 @@ public class EAN8 implements IBarcode{
 	
 	public EAN8(){
 		
-		System.out.println("Successfully created " + this.getClass().getName());
+		System.out.println("Creating: " + this.getClass().getName());
 		properties = generateMandatoryProperties(new Insets(5, 5, 5, 5));
+		
+		try {
+			
+			defaultFont = Font.createFont(Font.TRUETYPE_FONT, new File("OcrB Regular.ttf"));
+			Utils.log("Loaded font: " + defaultFont.getFontName(), Level.INFO, this);
+		}
+		catch(Exception e){
+			
+			Utils.logErr("Loading backup font", Level.SEVERE, this);
+			Utils.logEx(e, Level.SEVERE, this);
+			
+			defaultFont = new Font("Monospaced", Font.PLAIN, 12);
+			Utils.logErr("Loaded backup font: " + defaultFont.getFontName(), Level.INFO, this);
+		}
 	}
 	
 	@Override
@@ -144,7 +164,7 @@ public class EAN8 implements IBarcode{
 		String rawData = getRaw(cleanData);
 		Utils.log("Raw data     : " + rawData, Level.INFO, this);
 		
-		return render(rawData);
+		return render(rawData, cleanData);
 	}
 	
 	// region Private methods
@@ -154,7 +174,7 @@ public class EAN8 implements IBarcode{
 	 * @param data unchecked data
 	 * @return valid/invalid
 	 */
-	private boolean isValid(String data) throws Exception{
+	protected boolean isValid(String data) throws Exception{
 		
 		if(strict && data.length() != digits){
 			
@@ -182,7 +202,7 @@ public class EAN8 implements IBarcode{
 	 * @param data checked, valid data
 	 * @return checksum
 	 */
-	private int getChecksum(String data){
+	protected int getChecksum(String data){
 		
 		int mul = 3;
 		int sum = 0;
@@ -202,7 +222,7 @@ public class EAN8 implements IBarcode{
 	 * @param data data with checksum
 	 * @return raw binary string
 	 */
-	private String getRaw(String data){
+	protected String getRaw(String data){
 		
 		StringBuilder raw = new StringBuilder();
 		
@@ -230,11 +250,17 @@ public class EAN8 implements IBarcode{
 	 * @param raw data from raw generator
 	 * @return
 	 */
-	private Image render(String raw){
+	protected Image render(String raw, String text){
 		
 		Utils.log("Starting rendering", Level.INFO, this);
 		
-		// Convert colors
+		Stack<Stroke> strokes = new Stack<>();
+		
+		float[] dash = {10.0f};
+		BasicStroke debugStroke = new BasicStroke(3.0f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10.0f, dash, 0.0f);
+		
+		
+		// region Convert colors
 		java.awt.Color debugPen = new java.awt.Color((float)debugMarker.getRed(),
 		                                             (float)debugMarker.getGreen(),
 		                                             (float)debugMarker.getBlue(),
@@ -250,11 +276,16 @@ public class EAN8 implements IBarcode{
 		                                             (float)background.getBlue(),
 		                                             (float)background.getOpacity());
 		
-		// Calculate actual sizes in px
+		// endregion
+		
+		// region Calculate actual sizes in px
 		
 		int width = Math.round(WIDTH * SCALE * DPMM);
 		int heigth = Math.round(HEIGTH * SCALE * DPMM);
 		int margin = Math.round(MARGIN * SCALE * DPMM);
+		int extension = Math.round(EXTENSION * SCALE * DPMM);
+		
+		// endregion
 		
 		// Calculate width of an individial bit
 		float bit = Math.round((width/(float)raw.length()) * 100.0f) / 100.0f;
@@ -272,7 +303,7 @@ public class EAN8 implements IBarcode{
 			Utils.log("Pre-rendering report END", Level.INFO, this);
 		}
 		
-		// Create array of special indizes for heigth variation later
+		// region Create array of special indizes for heigth variation later
 		int l = raw.length() - 1;
 		int[] specIDX = new int[]{0, 2, l/2 - 1, l/2 +1, l - 2, l};
 		
@@ -282,22 +313,26 @@ public class EAN8 implements IBarcode{
 		                                        BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g2d = image.createGraphics();
 		
+		// endregion
+		
 		g2d.setColor(backPen);
 		g2d.fillRect(0, 0, image.getWidth(), image.getHeight());
 		
 		if(debug){
 			
 			g2d.setColor(debugPen);
+			strokes.push(g2d.getStroke());
+			g2d.setStroke(debugStroke);
+			
 			g2d.drawRect(0,0,2 * margin + width - 1, 2 * margin + heigth - 1);
 			g2d.drawLine(margin, 0, margin, heigth + 2 * margin);
 			g2d.drawLine(width + margin, 0, width + margin, heigth + 2 * margin);
 			g2d.drawLine(0, margin, width + 2 * margin, margin);
 			g2d.drawLine(0, heigth + margin, width + 2 * margin, heigth + margin);
+			g2d.setStroke(strokes.pop());
 		}
 		
-		// TODO: Render
-		float startY = margin;
-		float endY = 0;
+		float endY;
 		
 		for(int i = 0; i < raw.length(); i++){
 		
@@ -307,13 +342,13 @@ public class EAN8 implements IBarcode{
 				
 				final int cmp = i;
 				
-				endY = (IntStream.of(specIDX).anyMatch(j -> j == cmp)) ? (heigth + margin/2) : heigth;
+				endY = (IntStream.of(specIDX).anyMatch(j -> j == cmp)) ? (heigth + extension) : heigth;
 				
 				for(int x = 0; x < bit; x++){
 					
 					g2d.setColor(forePen);
 					g2d.drawLine((int)(margin + i * bit + x),
-					             (int)startY,
+					             margin,
 					             (int)(margin + i * bit + x),
 					             (int)(endY + margin));
 				}
@@ -321,12 +356,71 @@ public class EAN8 implements IBarcode{
 				if(debug){
 					
 					g2d.setColor(debugPen);
+					strokes.push(g2d.getStroke());
+					g2d.setStroke(debugStroke);
+					
 					g2d.drawRect((int)(margin + i * bit),
 					             margin,
 					             (int)bit,
 					             (int)endY);
+
+					g2d.setStroke(strokes.pop());
 				}
 			}
+		}
+		
+		if(!supHRP){
+			
+			int spacer = Math.round(SPACER * SCALE * DPMM);
+			Font f = defaultFont.deriveFont(TEXTHEIGTH * SCALE * DPMM);
+			
+			g2d.setFont(f);
+			FontMetrics fm = g2d.getFontMetrics();
+			
+			if(debug){
+				
+				Utils.log("Printing human readable representation", Level.INFO, this);
+				g2d.setColor(debugPen);
+				strokes.push(g2d.getStroke());
+				g2d.setStroke(debugStroke);
+				
+				g2d.drawLine(0,
+				             margin + heigth,
+				             image.getWidth(),
+				             margin + heigth);
+				
+				g2d.drawLine(0,
+				             margin + heigth + fm.getHeight(),
+				             image.getWidth(),
+				             margin + heigth + fm.getHeight());
+				
+				g2d.drawLine((int)(margin + START.length() * bit + spacer),
+				             heigth + margin,
+				             (int)(margin + START.length() * bit + spacer),
+				             heigth + margin + fm.getHeight());
+				
+				g2d.drawLine((int)(margin + width - START.length() * bit - spacer),
+				             heigth + margin,
+				             (int)(margin + width - START.length() * bit - spacer),
+				             heigth + margin + fm.getHeight());
+				
+				g2d.drawString(text, 0, image.getHeight());
+				
+				g2d.setStroke(strokes.pop());
+			}
+			
+			char[] txt = text.toCharArray();
+			
+			for(int i = 0; i < txt.length; i++){
+				
+				g2d.setColor(forePen);
+				
+				int addon = i >= 4 ? (int)(SEPARATOR.length() * bit) : 0;
+				g2d.drawString(txt[i] + "",
+				               (int)(margin + START.length() * bit + spacer + (i * 7 * bit) + addon),
+				               heigth + margin + fm.getHeight());
+			}
+			
 		}
 		
 		if(retard){
@@ -361,7 +455,7 @@ public class EAN8 implements IBarcode{
 	 * @param insets
 	 * @return
 	 */
-	private Node generateMandatoryProperties(Insets insets){
+	protected Node generateMandatoryProperties(Insets insets){
 		
 		Utils.log("First time generating mandatory properties",
 		          Level.SEVERE,
@@ -415,7 +509,7 @@ public class EAN8 implements IBarcode{
 	 * @param insets padding between the elements
 	 * @return container with gui elements
 	 */
-	private Node generateDigitSettings(Insets insets){
+	protected Node generateDigitSettings(Insets insets){
 		
 		TitledPane tpDigits = new TitledPane();
 		tpDigits.setCollapsible(true);
@@ -471,7 +565,7 @@ public class EAN8 implements IBarcode{
 	 * @param insets padding between the elements
 	 * @return container with gui elements
 	 */
-	private Node generateModeSettings(Insets insets){
+	protected Node generateModeSettings(Insets insets){
 		
 		TitledPane tpMode = new TitledPane();
 		tpMode.setText("Mode");
@@ -523,7 +617,7 @@ public class EAN8 implements IBarcode{
 	 * @param insets padding between the elements
 	 * @return container with gui elements
 	 */
-	private Node generateSizeSettings(Insets insets){
+	protected Node generateSizeSettings(Insets insets){
 	
 		TitledPane tpSize = new TitledPane();
 		tpSize.setText("Size");
@@ -566,7 +660,7 @@ public class EAN8 implements IBarcode{
 	 * @param insets padding between the elementes
 	 * @return container with gui elements
 	 */
-	private Node generateColorSettings(Insets insets){
+	protected Node generateColorSettings(Insets insets){
 		
 		TitledPane tpColor = new TitledPane();
 		tpColor.setText("Color");
@@ -617,7 +711,7 @@ public class EAN8 implements IBarcode{
 	 * @param insets padding between the elementes
 	 * @return container with gui elements
 	 */
-	private Node generateOptionalSettings(Insets insets){
+	protected Node generateOptionalSettings(Insets insets){
 		
 		TitledPane tpOptionals = new TitledPane();
 		tpOptionals.setText("Optionals");
@@ -641,6 +735,21 @@ public class EAN8 implements IBarcode{
 		cbRetard.selectedProperty().addListener(retardChanged);
 		cbRetard.setSelected(false);
 		gpOptionals.add(cbRetard, 0, 0);
+		
+		cbSupHRP = new CheckBox("Suppress HRR");
+		cbSupHRP.setTooltip(new Tooltip("Suppress human readable representation"));
+		ChangeListener<Boolean> hrpChanged = new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean
+					oldValue, Boolean newValue) {
+				
+				supHRP = newValue;
+				Utils.log("Suppres hrp-mode: " + newValue, Level.CONFIG, this);
+			}
+		};
+		cbSupHRP.selectedProperty().addListener(hrpChanged);
+		cbSupHRP.setSelected(false);
+		gpOptionals.add(cbSupHRP, 0, 1);
 		
 		cbDebug = new CheckBox(FORCE_DEBUG ? "DEBUG FORCED": "Debug");
 		cbDebug.setTooltip(new Tooltip("Enables debug mode (NOT RECOMMENDED)"));
@@ -666,7 +775,7 @@ public class EAN8 implements IBarcode{
 		cbDebug.selectedProperty().addListener(cbDebugChanged);
 		cbDebug.setSelected(FORCE_DEBUG);
 		cbDebug.setDisable(FORCE_DEBUG);
-		gpOptionals.add(cbDebug, 0, 1);
+		gpOptionals.add(cbDebug, 0, 2);
 		
 		tpOptionals.setContent(gpOptionals);
 		return tpOptionals;
